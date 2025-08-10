@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Safe & Lager Übersicht</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#7dd3fc; --glass:rgba(255,255,255,0.03);
+    --success:#10b981; --danger:#ef4444; --surface:#071024;
+    --radius:12px; --pad:14px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:linear-gradient(180deg,#051023 0%, #071834 60%);
+    color:#e6eef6; padding:28px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px; margin:0 auto; display:grid; gap:20px; grid-template-columns: 1fr 420px;}
+  header{grid-column:1/-1; display:flex; gap:18px; align-items:center; justify-content:space-between}
+  h1{margin:0; font-size:18px; letter-spacing:0.2px}
+  .sub{color:var(--muted); font-size:13px}
+  .card{background:var(--card); border-radius:var(--radius); padding:16px; box-shadow: 0 6px 24px rgba(2,6,23,0.6);}
+  .panel{display:flex; flex-direction:column; gap:12px}
+  .row{display:flex; gap:12px; align-items:center}
+  .col{display:flex; flex-direction:column; gap:8px}
+  .big{font-size:28px; font-weight:600}
+  .muted{color:var(--muted); font-size:13px}
+  .btn{background:var(--glass); border:1px solid rgba(255,255,255,0.04); color:var(--accent); padding:8px 12px; border-radius:8px; cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn-ghost{background:transparent; color:var(--muted); border:1px dashed rgba(255,255,255,0.03)}
+  .btn-danger{background:linear-gradient(90deg,#7f1d1d, #ef4444); color:white}
+  input[type="number"], input[type="text"], select {
+    background:transparent; border:1px solid rgba(255,255,255,0.04); color:inherit; padding:8px 10px; border-radius:8px;
+  }
+  label{font-size:13px; color:var(--muted)}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th, td{padding:8px 6px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.03)}
+  th{color:var(--muted); font-weight:600; font-size:12px}
+  .qsmall{font-size:12px; color:var(--muted)}
+  .resource {display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border-radius:10px}
+  .controls{display:flex; gap:8px; align-items:center}
+  .iconbtn{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); padding:6px 8px; border-radius:8px; cursor:pointer}
+  .history{max-height:220px; overflow:auto; display:flex; flex-direction:column; gap:8px}
+  .entry{background:rgba(0,0,0,0.15); padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:10px; align-items:center}
+  .entry .meta{display:flex; flex-direction:column}
+  .tag{font-size:12px; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.03); color:var(--muted)}
+  footer{grid-column:1/-1; display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:6px}
+  .smalltext{font-size:12px; color:var(--muted)}
+  .flexcol{display:flex; flex-direction:column}
+  .toggle{display:inline-flex; align-items:center; gap:8px}
+  input[type="file"]{display:none}
+  @media (max-width:980px){
+    .wrap{grid-template-columns:1fr; padding:12px}
+    header{flex-direction:column; align-items:flex-start; gap:6px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Safe & Lager — Teamübersicht</h1>
+        <div class="sub">Gemeinsames Konto + Ressourcen (Holz, Kunststoff, Rohöl). Änderungen werden lokal gespeichert.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="exportBtn">Export JSON</button>
+        <label class="btn btn-ghost" for="importFile" title="Import JSON"><input id="importFile" type="file" accept=".json" />Import</label>
+        <button class="btn" id="resetBtn" title="Reset Demo">Reset</button>
+      </div>
+    </header>
+
+    <!-- LEFT: Konto, Inventar -->
+    <section class="card panel">
+      <!-- Kontostand -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="muted">Kontostand (Safe)</div>
+            <div class="big" id="balanceDisplay">0,00 €</div>
+            <div class="qsmall">Gesamt inkl. Rohstoffe: <strong id="totalWithRes">0,00 €</strong></div>
+          </div>
+          <div style="text-align:right">
+            <div class="muted qsmall">Rohstoffwert</div>
+            <div id="resValue" style="font-weight:600">0,00 €</div>
+            <div class="muted qsmall">Letzte Änderung: <span id="lastChange">–</span></div>
+          </div>
+        </div>
+        <hr style="border:none;height:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <!-- Transaction form -->
+          <div style="flex:1; min-width:260px" class="card">
+            <div class="muted qsmall">Transaktion</div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <select id="txType">
+                <option value="in">Einzahlen</option>
+                <option value="out">Auszahlen</option>
+              </select>
+              <input id="txAmount" type="number" step="0.01" placeholder="Betrag" />
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <input id="txComment" type="text" placeholder="Kommentar (optional)" />
+              <button class="btn" id="txSubmit">✓</button>
+            </div>
+            <div class="muted qsmall" style="margin-top:6px">Transaktionen werden in der Historie angezeigt. Klick auf Eintrag zeigt Kommentar.</div>
+          </div>
+
+          <!-- Inventory quick add/remove -->
+          <div style="flex:1; min-width:260px" class="card">
+            <div class="muted qsmall">Schnell: Ressource ändern</div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <select id="resSelect">
+                <option value="holzstamm">Holzstamm (Roh)</option>
+                <option value="holzbretter">Holzbretter (verarbeitet)</option>
+                <option value="rohöl">Rohöl (Roh)</option>
+                <option value="kunststoff">Kunststoff (verarbeitet)</option>
+              </select>
+              <input id="resAmount" type="number" placeholder="Anzahl" />
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" id="resAdd">+ Eintragen</button>
+              <button class="btn btn-ghost" id="resRemove">− Austragen</button>
+            </div>
+            <div class="muted qsmall" style="margin-top:8px">Du kannst auch Preise anpassen (unten) — der Rohstoffwert aktualisiert sich automatisch.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventar-Liste -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="muted qsmall">Lagerbestand</div>
+          <div class="muted qsmall">Preis pro Stück (editierbar)</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <!-- resource rows -->
+          <div class="resource" data-key="holzstamm">
+            <div>
+              <div style="font-weight:600">Holzstämme</div>
+              <div class="qsmall">unverarbeitet (Stück)</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="qsmall">Anzahl: <span class="qty" id="q-holzstamm">0</span></div>
+              <div class="controls">
+                <button class="iconbtn" data-act="dec" data-key="holzstamm">−</button>
+                <button class="iconbtn" data-act="inc" data-key="holzstamm">+</button>
+              </div>
+              <div style="width:110px;display:flex;gap:6px;align-items:center">
+                <input class="price" data-key="holzstamm" type="number" step="0.01" placeholder="Preis" />
+                <div class="qsmall" id="val-holzstamm">0,00 €</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="resource" data-key="holzbretter">
+            <div>
+              <div style="font-weight:600">Holzbretter</div>
+              <div class="qsmall">verarbeitet (Stück)</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="qsmall">Anzahl: <span class="qty" id="q-holzbretter">0</span></div>
+              <div class="controls">
+                <button class="iconbtn" data-act="dec" data-key="holzbretter">−</button>
+                <button class="iconbtn" data-act="inc" data-key="holzbretter">+</button>
+              </div>
+              <div style="width:110px;display:flex;gap:6px;align-items:center">
+                <input class="price" data-key="holzbretter" type="number" step="0.01" placeholder="135" />
+                <div class="qsmall" id="val-holzbretter">0,00 €</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="resource" data-key="rohöl">
+            <div>
+              <div style="font-weight:600">Rohöl</div>
+              <div class="qsmall">unverarbeitet (Liter/Stück)</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="qsmall">Anzahl: <span class="qty" id="q-rohöl">0</span></div>
+              <div class="controls">
+                <button class="iconbtn" data-act="dec" data-key="rohöl">−</button>
+                <button class="iconbtn" data-act="inc" data-key="rohöl">+</button>
+              </div>
+              <div style="width:110px;display:flex;gap:6px;align-items:center">
+                <input class="price" data-key="rohöl" type="number" step="0.01" placeholder="Preis" />
+                <div class="qsmall" id="val-rohöl">0,00 €</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="resource" data-key="kunststoff">
+            <div>
+              <div style="font-weight:600">Kunststoff</div>
+              <div class="qsmall">verarbeitet (Stück)</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="qsmall">Anzahl: <span class="qty" id="q-kunststoff">0</span></div>
+              <div class="controls">
+                <button class="iconbtn" data-act="dec" data-key="kunststoff">−</button>
+                <button class="iconbtn" data-act="inc" data-key="kunststoff">+</button>
+              </div>
+              <div style="width:110px;display:flex;gap:6px;align-items:center">
+                <input class="price" data-key="kunststoff" type="number" step="0.01" placeholder="450" />
+                <div class="qsmall" id="val-kunststoff">0,00 €</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historien -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="muted qsmall">Historie (Transaktionen & Lagerbewegungen)</div>
+          <div class="smalltext">Klick auf Eintrag → Kommentar</div>
+        </div>
+        <div class="history" id="historyList" style="margin-top:8px"></div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: Einstellungen & Details -->
+    <aside class="card panel">
+      <div>
+        <div class="muted qsmall">Einstellungen</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+          <label class="toggle"><input type="checkbox" id="saveAuto" /> <span class="muted">Auto-Save (localStorage)</span></label>
+          <label class="toggle"><input type="checkbox" id="showComments" checked /> <span class="muted">Kommentare in Liste anzeigen (klickbar)</span></label>
+        </div>
+      </div>
+
+      <div>
+        <div class="muted qsmall">Preise (pro Stück)</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">Holzbretter</div>
+            <input class="price" data-key="holzbretter" type="number" step="0.01" placeholder="135" />
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">Kunststoff</div>
+            <input class="price" data-key="kunststoff" type="number" step="0.01" placeholder="450" />
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">Holzstämme (optional)</div>
+            <input class="price" data-key="holzstamm" type="number" step="0.01" placeholder="0" />
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">Rohöl (optional)</div>
+            <input class="price" data-key="rohöl" type="number" step="0.01" placeholder="0" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="muted qsmall">Import / Export</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="downloadJson">Herunterladen</button>
+          <button class="btn btn-ghost" id="clearHistory">Leere Historie</button>
+        </div>
+        <div class="muted qsmall" style="margin-top:8px">Tipp: JSON in Repo hochladen oder als Backup speichern.</div>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="muted qsmall">Deploy auf GitHub Pages</div>
+        <div class="smalltext" style="margin-top:6px">
+          1) Neues Repo anlegen, `index.html` hochladen.<br>
+          2) Einstellungen → Pages → Branch `main` → Save.<br>
+          3) Eure Seite ist dann unter `https://<user>.github.io/<repo>/` erreichbar.
+        </div>
+      </div>
+    </aside>
+
+    <footer>
+      <div class="smalltext">Erstellt für gemeinsames Sparen & Lagerverwaltung — lokal gespeichert. Export/Import für Backup oder GitHub.</div>
+      <div class="smalltext">Version: 1.0 — wenn du Anpassungen willst sag Bescheid.</div>
+    </footer>
+  </div>
+
+<script>
+/* ==========================
+   App State
+   ========================== */
+const DEFAULT = {
+  balance: 0.00,
+  lastChange: null,
+  resources: {
+    holzstamm: {qty:0, price:0},
+    holzbretter: {qty:0, price:135},
+    rohöl: {qty:0, price:0},
+    kunststoff: {qty:0, price:450}
+  },
+  history: []
+};
+
+let state = loadState() || structuredClone(DEFAULT);
+let autoSave = true;
+
+/* ==========================
+   Helpers
+   ========================== */
+function fmt(n){
+  if(isNaN(n)) n = 0;
+  // ensure step-by-step rounding: round to cents
+  return n.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+}
+function round2(n){ return Math.round((Number(n) || 0) * 100) / 100; }
+
+function saveState(){
+  if(!autoSave) return;
+  localStorage.setItem('safe_lager_state_v1', JSON.stringify(state));
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem('safe_lager_state_v1');
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function structuredClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+/* ==========================
+   Calculations & UI updates
+   ========================== */
+function resourceValue(){
+  let sum = 0;
+  for(const k of Object.keys(state.resources)){
+    const r = state.resources[k];
+    const q = Number(r.qty) || 0;
+    const p = Number(r.price) || 0;
+    sum += q * p;
+  }
+  return round2(sum);
+}
+
+function updateDisplays(){
+  // balance
+  document.getElementById('balanceDisplay').textContent = fmt(state.balance);
+  document.getElementById('resValue').textContent = fmt(resourceValue());
+  document.getElementById('totalWithRes').textContent = fmt(round2(state.balance + resourceValue()));
+  document.getElementById('lastChange').textContent = state.lastChange ? new Date(state.lastChange).toLocaleString('de-DE') : '–';
+
+  // resource rows
+  for(const k of Object.keys(state.resources)){
+    document.getElementById('q-' + k).textContent = state.resources[k].qty;
+    document.getElementById('val-' + k).textContent = fmt(round2((Number(state.resources[k].qty) || 0) * (Number(state.resources[k].price) || 0)));
+    // sync price inputs
+    const priceInputs = document.querySelectorAll('.price[data-key="'+k+'"]');
+    priceInputs.forEach(inp => inp.value = (state.resources[k].price !== undefined && state.resources[k].price !== null) ? state.resources[k].price : '');
+  }
+
+  // history
+  renderHistory();
+  saveState();
+}
+
+function pushHistory(entry){
+  // entry: {type:'tx'|'res', action:'in'|'out', amount, resource?, comment?, ts}
+  entry.ts = new Date().toISOString();
+  state.history.unshift(entry); // newest first
+  // keep reasonable length
+  if(state.history.length > 2000) state.history.length = 2000;
+  state.lastChange = entry.ts;
+  saveState();
+  updateDisplays();
+}
+
+/* ==========================
+   UI Actions: Transactions
+   ========================== */
+
+document.getElementById('txSubmit').addEventListener('click', () => {
+  const type = document.getElementById('txType').value;
+  const amountRaw = document.getElementById('txAmount').value;
+  const comment = document.getElementById('txComment').value.trim();
+  let amount = round2(Number(amountRaw));
+  if(isNaN(amount) || amount <= 0){
+    alert('Bitte einen gültigen Betrag > 0 eingeben.');
+    return;
+  }
+  if(type === 'in'){
+    state.balance = round2(state.balance + amount);
+    pushHistory({type:'tx', action:'in', amount: amount, comment});
+  } else {
+    // Auszahlung
+    state.balance = round2(state.balance - amount);
+    pushHistory({type:'tx', action:'out', amount: amount, comment});
+  }
+
+  // clear inputs
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txComment').value = '';
+  updateDisplays();
+});
+
+/* ==========================
+   UI Actions: Resources
+   ========================== */
+
+document.getElementById('resAdd').addEventListener('click', () => {
+  changeResourceByForm(true);
+});
+document.getElementById('resRemove').addEventListener('click', () => {
+  changeResourceByForm(false);
+});
+
+function changeResourceByForm(isAdd){
+  const key = document.getElementById('resSelect').value;
+  const amtRaw = document.getElementById('resAmount').value;
+  const amt = Math.floor(Number(amtRaw));
+  if(isNaN(amt) || amt === 0){
+    alert('Bitte eine gültige Anzahl (ganze Zahl) eingeben (≠ 0).');
+    return;
+  }
+  const delta = isAdd ? amt : -amt;
+  const prev = Number(state.resources[key].qty) || 0;
+  const next = prev + delta;
+  if(next < 0){
+    if(!confirm('Bestand würde negativ werden. Fortfahren?')) return;
+  }
+  state.resources[key].qty = next;
+  pushHistory({type:'res', action: isAdd ? 'in' : 'out', resource:key, amount: amt, comment: ''});
+  document.getElementById('resAmount').value = '';
+  updateDisplays();
+}
+
+/* increment/decrement buttons per resource */
+document.querySelectorAll('.iconbtn').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
+    const act = btn.getAttribute('data-act');
+    const key = btn.getAttribute('data-key');
+    if(!key) return;
+    const step = act === 'inc' ? 1 : -1;
+    const prev = Number(state.resources[key].qty) || 0;
+    const next = prev + step;
+    if(next < 0) return;
+    state.resources[key].qty = next;
+    pushHistory({type:'res', action: step>0 ? 'in' : 'out', resource:key, amount: Math.abs(step), comment: ''});
+    updateDisplays();
+  });
+});
+
+/* Price inputs */
+document.querySelectorAll('.price').forEach(inp=>{
+  inp.addEventListener('change', ()=>{
+    const key = inp.getAttribute('data-key');
+    const v = round2(Number(inp.value));
+    state.resources[key].price = isNaN(v) ? 0 : v;
+    pushHistory({type:'price', resource:key, price: state.resources[key].price, ts: new Date().toISOString()});
+    updateDisplays();
+  });
+});
+
+/* ==========================
+   History render & interactions
+   ========================== */
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+  const showComments = document.getElementById('showComments').checked;
+  state.history.forEach((h, idx) => {
+    const el = document.createElement('div');
+    el.className = 'entry';
+    const left = document.createElement('div');
+    left.className = 'meta';
+    const t = document.createElement('div');
+    t.style.fontWeight = 600;
+    if(h.type === 'tx'){
+      t.textContent = h.action === 'in' ? `Einzahlung +${fmt(h.amount)}` : `Auszahlung −${fmt(h.amount)}`;
+    } else if(h.type === 'res'){
+      t.textContent = `${h.action === 'in' ? 'Eingelagert' : 'Entnommen'} ${h.amount} × ${labelFor(h.resource)}`;
+    } else if(h.type === 'price'){
+      t.textContent = `Preis: ${labelFor(h.resource)} → ${fmt(h.price)}`;
+    } else {
+      t.textContent = JSON.stringify(h);
+    }
+    const sub = document.createElement('div');
+    sub.className='qsmall';
+    sub.textContent = new Date(h.ts || h.ts === 0 ? h.ts : new Date()).toLocaleString('de-DE');
+    left.appendChild(t);
+    left.appendChild(sub);
+
+    const right = document.createElement('div');
+    right.style.display='flex'; right.style.flexDirection='column'; right.style.alignItems='flex-end';
+    const tag = document.createElement('div'); tag.className='tag';
+    tag.textContent = h.type === 'tx' ? 'Geld' : h.type === 'res' ? 'Ressource' : 'Info';
+    const btn = document.createElement('button'); btn.className='btn btn-ghost'; btn.textContent = 'Details';
+    btn.addEventListener('click', ()=> showDetails(h));
+    right.appendChild(tag);
+    right.appendChild(btn);
+
+    el.appendChild(left);
+    el.appendChild(right);
+
+    list.appendChild(el);
+  });
+}
+
+function labelFor(key){
+  const map = {holzstamm:'Holzstamm', holzbretter:'Holzbretter', rohöl:'Rohöl', kunststoff:'Kunststoff'};
+  return map[key] || key;
+}
+
+function showDetails(h){
+  // simple modal-like prompt
+  let lines = [];
+  if(h.type === 'tx'){
+    lines.push(`${h.action === 'in' ? 'Einzahlung' : 'Auszahlung'}: ${fmt(h.amount)}`);
+    if(h.comment) lines.push(`Kommentar: ${h.comment}`);
+    lines.push(`Zeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
+  } else if(h.type === 'res'){
+    lines.push(`${h.action === 'in' ? 'Eingelagert' : 'Entnommen'}: ${h.amount} × ${labelFor(h.resource)}`);
+    if(h.comment) lines.push(`Kommentar: ${h.comment}`);
+    lines.push(`Zeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
+  } else if(h.type === 'price'){
+    lines.push(`Preisänderung: ${labelFor(h.resource)} → ${fmt(h.price)}`);
+    lines.push(`Zeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
+  } else {
+    lines.push(JSON.stringify(h, null, 2));
+  }
+  alert(lines.join('\\n'));
+}
+
+/* ==========================
+   Export / Import / Reset
+   ========================== */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'safe_lager_export.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('downloadJson').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'safe_lager_state.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importFile').addEventListener('change', (ev)=>{
+  const f = ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(confirm('Import ersetzen den aktuellen Zustand? (nicht rückgängig)')){
+        state = parsed;
+        saveState();
+        updateDisplays();
+        alert('Import erfolgreich.');
+      }
+    }catch(e){
+      alert('Ungültiges JSON.');
+    }
+  };
+  reader.readAsText(f);
+  // reset input
+  ev.target.value = '';
+});
+
+document.getElementById('clearHistory').addEventListener('click', ()=>{
+  if(!confirm('Historie wirklich leeren?')) return;
+  state.history = [];
+  saveState();
+  updateDisplays();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('Alles zurücksetzen? (lokal, unwiderruflich)')) return;
+  state = structuredClone(DEFAULT);
+  saveState();
+  updateDisplays();
+});
+
+/* toggle auto-save & comments */
+document.getElementById('saveAuto').addEventListener('change', (e)=>{
+  autoSave = e.target.checked;
+  if(autoSave) saveState();
+});
+document.getElementById('showComments').addEventListener('change', (e)=>{
+  // just re-render (we currently show details by clicking)
+  updateDisplays();
+});
+
+/* allow manual file import via label too */
+document.getElementById('importFile').addEventListener('click', (e)=> e.stopPropagation());
+
+/* ==========================
+   Init: load defaults into UI placeholders
+   ========================== */
+(function init(){
+  // if no saved state, initialize defaults
+  if(!localStorage.getItem('safe_lager_state_v1')){
+    // seed demo values (optional — you can remove)
+    state = structuredClone(DEFAULT);
+    state.balance = 0.00;
+    state.resources.holzbretter.qty = 0;
+    state.resources.holzbretter.price = 135;
+    state.resources.kunststoff.price = 450;
+    saveState();
+  } else {
+    const saved = loadState();
+    if(saved) state = saved;
+  }
+
+  // set autoSave checkbox default true
+  document.getElementById('saveAuto').checked = autoSave;
+  // fill price placeholders (some inputs appear twice)
+  document.querySelectorAll('.price').forEach(inp=>{
+    const key = inp.getAttribute('data-key');
+    if(state.resources[key] && state.resources[key].price !== undefined) inp.value = state.resources[key].price;
+  });
+
+  updateDisplays();
+})();
+</script>
+</body>
+</html>
