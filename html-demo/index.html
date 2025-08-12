@@ -3,56 +3,104 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Safe & Lager Übersicht</title>
+<title>Safe & Lager — Minimal Dashboard</title>
 <style>
   :root{
-    --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#7dd3fc; --glass:rgba(255,255,255,0.03);
-    --success:#10b981; --danger:#ef4444; --surface:#071024;
-    --radius:12px; --pad:14px;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --bg:#f6f7f9; --card:#ffffff; --muted:#6b7280; --accent:#0ea5ff; --accent-strong:#0077cc;
+    --radius:12px; --pad:16px; --border:#e6e9ef; --ink:#111827;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; min-height:100vh; background:linear-gradient(180deg,#051023 0%, #071834 60%);
-    color:#e6eef6; padding:28px; -webkit-font-smoothing:antialiased;
+  body{margin:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;padding:28px}
+  .wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
+  header{display:flex;gap:18px;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .hidden{display:none !important;}
+  .icon-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 10px;border-radius:9px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+  .primary{background:var(--accent);color:#fff;border:none;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+
+  /* Toasts */
+  .toast-stack{
+    position: fixed; right: 20px; bottom: 20px; z-index: 3000;
+    display: flex; flex-direction: column; gap: 8px;
   }
-  .wrap{max-width:1100px; margin:0 auto; display:grid; gap:20px; grid-template-columns: 1fr 420px;}
-  header{grid-column:1/-1; display:flex; gap:18px; align-items:center; justify-content:space-between}
-  h1{margin:0; font-size:18px; letter-spacing:0.2px}
-  .sub{color:var(--muted); font-size:13px}
-  .card{background:var(--card); border-radius:var(--radius); padding:16px; box-shadow: 0 6px 24px rgba(2,6,23,0.6);}
-  .panel{display:flex; flex-direction:column; gap:12px}
-  .row{display:flex; gap:12px; align-items:center}
-  .col{display:flex; flex-direction:column; gap:8px}
-  .big{font-size:28px; font-weight:600}
-  .muted{color:var(--muted); font-size:13px}
-  .btn{background:var(--glass); border:1px solid rgba(255,255,255,0.04); color:var(--accent); padding:8px 12px; border-radius:8px; cursor:pointer}
-  .btn:active{transform:translateY(1px)}
-  .btn-ghost{background:transparent; color:var(--muted); border:1px dashed rgba(255,255,255,0.03)}
-  .btn-danger{background:linear-gradient(90deg,#7f1d1d, #ef4444); color:white}
-  input[type="number"], input[type="text"], select {
-    background:transparent; border:1px solid rgba(255,255,255,0.04); color:inherit; padding:8px 10px; border-radius:8px;
+  .toast{
+    background: #111827; color: #fff; border-radius: 10px; padding: 10px 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.18); font-size: 14px; max-width: 360px;
+    border: 1px solid rgba(255,255,255,0.08); opacity: 0; transform: translateY(6px);
+    transition: opacity .18s ease, transform .18s ease;
   }
-  label{font-size:13px; color:var(--muted)}
-  table{width:100%; border-collapse:collapse; font-size:13px}
-  th, td{padding:8px 6px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.03)}
-  th{color:var(--muted); font-weight:600; font-size:12px}
-  .qsmall{font-size:12px; color:var(--muted)}
-  .resource {display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border-radius:10px}
-  .controls{display:flex; gap:8px; align-items:center}
-  .iconbtn{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); padding:6px 8px; border-radius:8px; cursor:pointer}
-  .history{max-height:220px; overflow:auto; display:flex; flex-direction:column; gap:8px}
-  .entry{background:rgba(0,0,0,0.15); padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:10px; align-items:center}
-  .entry .meta{display:flex; flex-direction:column}
-  .tag{font-size:12px; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.03); color:var(--muted)}
-  footer{grid-column:1/-1; display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:6px}
-  .smalltext{font-size:12px; color:var(--muted)}
-  .flexcol{display:flex; flex-direction:column}
-  .toggle{display:inline-flex; align-items:center; gap:8px}
-  input[type="file"]{display:none}
+  .toast.show{opacity:1; transform: translateY(0)}
+  .toast.ok{background:#0b8f4d}
+  .toast.warn{background:#a36a00}
+  .toast.error{background:#b91c1c}
+
+  /* Modal Overlay */
+  .modal-overlay{
+    position: fixed; inset: 0; background: rgba(17,24,39,.45); backdrop-filter: blur(2px);
+    display: none; align-items: center; justify-content: center; z-index: 4000;
+  }
+  .modal{
+    background: var(--card,#fff); color: var(--ink,#111827); border-radius: 14px; padding: 16px;
+    width: min(520px, 92vw); box-shadow: 0 20px 48px rgba(0,0,0,.22); border: 1px solid var(--border,#e6e9ef);
+  }
+  .modal h4{margin:0 0 8px 0; font-size:16px}
+  .modal .msg{color: var(--muted,#6b7280); font-size:14px; margin-bottom: 12px; white-space: pre-wrap}
+  .modal .actions{display:flex; gap:8px; justify-content:flex-end}
+  .modal .btn{padding:8px 12px; border-radius:9px; border:1px solid var(--border,#e6e9ef); background:#fff; cursor:pointer}
+  .modal .btn.primary{background: var(--accent,#0ea5ff); color:#fff; border:none}
+  .modal input[type="text"], .modal input[type="number"]{
+    width:100%; margin:8px 0 12px 0; padding:8px 10px; border:1px solid var(--border,#e6e9ef);
+    border-radius:8px; background: #fff; color: inherit;
+  }
+
+  .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 6px 20px rgba(15,23,42,0.06)}
+  .panel{display:flex;flex-direction:column;gap:12px}
+  .muted{color:var(--muted);font-size:13px}
+  .note{font-size:12px;color:var(--muted)}
+
+  .balance-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+  .balance-left{display:flex;flex-direction:column;gap:6px}
+  .balance-big{font-size:28px;font-weight:700}
+  .balance-sub{font-size:13px;color:var(--muted)}
+  .meta-right{text-align:right}
+
+  input[type="number"],input[type="text"],select{background:transparent;border:1px solid var(--border);color:inherit;padding:8px 10px;border-radius:8px;width:100%;font-size:14px}
+
+  .small-card{padding:12px;border-radius:10px;background:#fbfdff;border:1px solid #eef2f7;box-shadow:none;min-width:260px}
+
+  .inventory{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .resource{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:12px;border-radius:10px;border:1px solid #f0f3f7;background:transparent}
+  .resource .label{display:flex;flex-direction:column}
+  .resource .title{font-weight:600}
+  .resource .qty{font-size:18px;font-weight:700}
+  .resource .val{font-size:13px;color:var(--muted);text-align:right;min-width:110px}
+
+  .history{max-height:320px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .entry{background:#fff;padding:10px;border-radius:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid #f0f3f7}
+  .entry .meta{display:flex;flex-direction:column}
+  .tag{font-size:12px;padding:4px 8px;border-radius:999px;background:#f3f6fb;color:var(--muted)}
+
+  /* Sparziel Widget */
+  .goal-box .progress-wrap{width:100%;height:12px;background:#eef4fb;border-radius:6px;overflow:hidden;margin-top:8px}
+  .goal-box .progress{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--accent-strong));width:0%}
+  .goal-box .goal-line{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:6px}
+  .goal-box .goal-title{font-weight:600;color:var(--ink);font-size:14px}
+
+  /* Settings */
+  .settings-panel{position:fixed;right:-420px;top:0;width:400px;height:100vh;background:var(--card);box-shadow:-12px 0 40px rgba(15,23,42,0.08);padding:20px;transition:right .28s ease;z-index:1200;overflow:auto}
+  .settings-panel.open{right:0}
+  .settings-panel h3{margin:0 0 12px 0}
+  .settings-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .divider{margin:14px 0;border:none;height:1px;background:#f1f5f9}
+  .danger{border-color:#ffd8d8 !important; color:#b91c1c !important}
+
+  footer{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:6px;color:var(--muted);font-size:13px}
+
   @media (max-width:980px){
-    .wrap{grid-template-columns:1fr; padding:12px}
-    header{flex-direction:column; align-items:flex-start; gap:6px}
+    body{padding:16px}
+    .settings-panel{width:100%;right:-100%}
   }
 </style>
 </head>
@@ -60,561 +108,530 @@
   <div class="wrap">
     <header>
       <div>
-        <h1>Safe & Lager — Teamübersicht</h1>
-        <div class="sub">Gemeinsames Konto + Ressourcen (Holz, Kunststoff, Rohöl). Änderungen werden lokal gespeichert.</div>
+        <h1>Finanz- & Lagerübersicht</h1>
+        <div class="sub">Dashboard</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn" id="exportBtn">Export JSON</button>
-        <label class="btn btn-ghost" for="importFile" title="Import JSON"><input id="importFile" type="file" accept=".json" />Import</label>
-        <button class="btn" id="resetBtn" title="Reset Demo">Reset</button>
+      <div class="top-controls">
+        <button id="toggleSettings" class="icon-btn" title="Einstellungen" aria-expanded="false" type="button">⚙️</button>
       </div>
     </header>
 
-    <!-- LEFT: Konto, Inventar -->
     <section class="card panel">
-      <!-- Kontostand -->
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div class="muted">Kontostand (Safe)</div>
-            <div class="big" id="balanceDisplay">0,00 €</div>
-            <div class="qsmall">Gesamt inkl. Rohstoffe: <strong id="totalWithRes">0,00 €</strong></div>
-          </div>
-          <div style="text-align:right">
-            <div class="muted qsmall">Rohstoffwert</div>
-            <div id="resValue" style="font-weight:600">0,00 €</div>
-            <div class="muted qsmall">Letzte Änderung: <span id="lastChange">–</span></div>
-          </div>
+      <div class="balance-row">
+        <div class="balance-left">
+          <div class="balance-big" id="totalWithRes">0,00 €</div>
+          <div class="balance-sub">Gesamtwert (Geld + Rohstoffe)</div>
+          <div class="muted">Safe-Kontostand: <strong id="balanceDisplay">0,00 €</strong></div>
         </div>
-        <hr style="border:none;height:10px">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <!-- Transaction form -->
-          <div style="flex:1; min-width:260px" class="card">
-            <div class="muted qsmall">Transaktion</div>
-            <div style="display:flex;gap:8px;margin-top:6px">
-              <select id="txType">
-                <option value="in">Einzahlen</option>
-                <option value="out">Auszahlen</option>
-              </select>
-              <input id="txAmount" type="number" step="0.01" placeholder="Betrag" />
-            </div>
-            <div style="margin-top:8px;display:flex;gap:8px">
-              <input id="txComment" type="text" placeholder="Kommentar (optional)" />
-              <button class="btn" id="txSubmit">✓</button>
-            </div>
-            <div class="muted qsmall" style="margin-top:6px">Transaktionen werden in der Historie angezeigt. Klick auf Eintrag zeigt Kommentar.</div>
-          </div>
-
-          <!-- Inventory quick add/remove -->
-          <div style="flex:1; min-width:260px" class="card">
-            <div class="muted qsmall">Schnell: Ressource ändern</div>
-            <div style="display:flex;gap:8px;margin-top:6px">
-              <select id="resSelect">
-                <option value="holzstamm">Holzstamm (Roh)</option>
-                <option value="holzbretter">Holzbretter (verarbeitet)</option>
-                <option value="rohöl">Rohöl (Roh)</option>
-                <option value="kunststoff">Kunststoff (verarbeitet)</option>
-              </select>
-              <input id="resAmount" type="number" placeholder="Anzahl" />
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button class="btn" id="resAdd">+ Eintragen</button>
-              <button class="btn btn-ghost" id="resRemove">− Austragen</button>
-            </div>
-            <div class="muted qsmall" style="margin-top:8px">Du kannst auch Preise anpassen (unten) — der Rohstoffwert aktualisiert sich automatisch.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Inventar-Liste -->
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="muted qsmall">Lagerbestand</div>
-          <div class="muted qsmall">Preis pro Stück (editierbar)</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-          <!-- resource rows -->
-          <div class="resource" data-key="holzstamm">
-            <div>
-              <div style="font-weight:600">Holzstämme</div>
-              <div class="qsmall">unverarbeitet (Stück)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="qsmall">Anzahl: <span class="qty" id="q-holzstamm">0</span></div>
-              <div class="controls">
-                <button class="iconbtn" data-act="dec" data-key="holzstamm">−</button>
-                <button class="iconbtn" data-act="inc" data-key="holzstamm">+</button>
-              </div>
-              <div style="width:110px;display:flex;gap:6px;align-items:center">
-                <input class="price" data-key="holzstamm" type="number" step="0.01" placeholder="Preis" />
-                <div class="qsmall" id="val-holzstamm">0,00 €</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="resource" data-key="holzbretter">
-            <div>
-              <div style="font-weight:600">Holzbretter</div>
-              <div class="qsmall">verarbeitet (Stück)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="qsmall">Anzahl: <span class="qty" id="q-holzbretter">0</span></div>
-              <div class="controls">
-                <button class="iconbtn" data-act="dec" data-key="holzbretter">−</button>
-                <button class="iconbtn" data-act="inc" data-key="holzbretter">+</button>
-              </div>
-              <div style="width:110px;display:flex;gap:6px;align-items:center">
-                <input class="price" data-key="holzbretter" type="number" step="0.01" placeholder="135" />
-                <div class="qsmall" id="val-holzbretter">0,00 €</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="resource" data-key="rohöl">
-            <div>
-              <div style="font-weight:600">Rohöl</div>
-              <div class="qsmall">unverarbeitet (Liter/Stück)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="qsmall">Anzahl: <span class="qty" id="q-rohöl">0</span></div>
-              <div class="controls">
-                <button class="iconbtn" data-act="dec" data-key="rohöl">−</button>
-                <button class="iconbtn" data-act="inc" data-key="rohöl">+</button>
-              </div>
-              <div style="width:110px;display:flex;gap:6px;align-items:center">
-                <input class="price" data-key="rohöl" type="number" step="0.01" placeholder="Preis" />
-                <div class="qsmall" id="val-rohöl">0,00 €</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="resource" data-key="kunststoff">
-            <div>
-              <div style="font-weight:600">Kunststoff</div>
-              <div class="qsmall">verarbeitet (Stück)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="qsmall">Anzahl: <span class="qty" id="q-kunststoff">0</span></div>
-              <div class="controls">
-                <button class="iconbtn" data-act="dec" data-key="kunststoff">−</button>
-                <button class="iconbtn" data-act="inc" data-key="kunststoff">+</button>
-              </div>
-              <div style="width:110px;display:flex;gap:6px;align-items:center">
-                <input class="price" data-key="kunststoff" type="number" step="0.01" placeholder="450" />
-                <div class="qsmall" id="val-kunststoff">0,00 €</div>
-              </div>
+        <div style="width:360px">
+          <div class="muted meta-right">Letzte Änderung: <span id="lastChange">–</span></div>
+          <!-- SPARZIEL (ersetzt die frühere Chart) -->
+          <div id="goalBox" class="card goal-box" style="margin-top:12px">
+            <div class="muted">Sparziel</div>
+            <div id="goalContent" style="margin-top:6px">
+              <div class="note">Kein Sparziel gesetzt. In den Einstellungen hinzufügen.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Historien -->
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="muted qsmall">Historie (Transaktionen & Lagerbewegungen)</div>
-          <div class="smalltext">Klick auf Eintrag → Kommentar</div>
-        </div>
-        <div class="history" id="historyList" style="margin-top:8px"></div>
-      </div>
-
-    </section>
-
-    <!-- RIGHT: Einstellungen & Details -->
-    <aside class="card panel">
-      <div>
-        <div class="muted qsmall">Einstellungen</div>
-        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-          <label class="toggle"><input type="checkbox" id="saveAuto" /> <span class="muted">Auto-Save (localStorage)</span></label>
-          <label class="toggle"><input type="checkbox" id="showComments" checked /> <span class="muted">Kommentare in Liste anzeigen (klickbar)</span></label>
-        </div>
-      </div>
-
-      <div>
-        <div class="muted qsmall">Preise (pro Stück)</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1">Holzbretter</div>
-            <input class="price" data-key="holzbretter" type="number" step="0.01" placeholder="135" />
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">
+        <div class="small-card card" style="flex:1;min-width:260px;">
+          <div class="note">Transaktion</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <select id="txType">
+              <option value="in">Einzahlen</option>
+              <option value="out">Auszahlen</option>
+            </select>
+            <input id="txAmount" type="text" placeholder="Betrag" />
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1">Kunststoff</div>
-            <input class="price" data-key="kunststoff" type="number" step="0.01" placeholder="450" />
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1">Holzstämme (optional)</div>
-            <input class="price" data-key="holzstamm" type="number" step="0.01" placeholder="0" />
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1">Rohöl (optional)</div>
-            <input class="price" data-key="rohöl" type="number" step="0.01" placeholder="0" />
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <input id="txComment" type="text" placeholder="Kommentar (optional)" />
+            <button class="primary" id="txSubmit" type="button">Abschließen</button>
           </div>
         </div>
-      </div>
 
-      <div>
-        <div class="muted qsmall">Import / Export</div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn" id="downloadJson">Herunterladen</button>
-          <button class="btn btn-ghost" id="clearHistory">Leere Historie</button>
+        <div class="small-card card" style="flex:1;min-width:260px;">
+          <div class="note">Schnell: Bestand ändern</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <select id="resSelect"></select>
+            <input id="resAmount" type="number" placeholder="Anzahl (+/-)" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="resComment" type="text" placeholder="Kommentar (optional)" />
+            <button class="primary" id="resApply" type="button">Verbuchen</button>
+          </div>
+          <div class="note" style="margin-top:8px">Positive Zahl = Einlagern, negative Zahl = Entnehmen.</div>
         </div>
-        <div class="muted qsmall" style="margin-top:8px">Tipp: JSON in Repo hochladen oder als Backup speichern.</div>
       </div>
 
       <div style="margin-top:14px">
-        <div class="muted qsmall">Deploy auf GitHub Pages</div>
-        <div class="smalltext" style="margin-top:6px">
-          1) Neues Repo anlegen, `index.html` hochladen.<br>
-          2) Einstellungen → Pages → Branch `main` → Save.<br>
-          3) Eure Seite ist dann unter `https://<user>.github.io/<repo>/` erreichbar.
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div class="note">Lagerbestand</div>
+          <div class="note">Wert</div>
+        </div>
+        <div class="inventory" id="inventoryList"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px">
+          <div class="note">Rohstoffwert gesamt</div>
+          <div style="font-weight:700" id="resValue">0,00 €</div>
         </div>
       </div>
-    </aside>
+
+      <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="note">Historie</div>
+          <button id="toggleHistory" class="icon-btn" aria-expanded="true" type="button">Zuklappen</button>
+        </div>
+        <div class="history" id="historyList"></div>
+      </div>
+    </section>
 
     <footer>
-      <div class="smalltext">Erstellt für gemeinsames Sparen & Lagerverwaltung — lokal gespeichert. Export/Import für Backup oder GitHub.</div>
-      <div class="smalltext">Version: 1.0 — wenn du Anpassungen willst sag Bescheid.</div>
+      <div>Version 1.8</div>
+      <div class="note">Speichert lokal. Import/Export unter Einstellungen.</div>
     </footer>
   </div>
 
+  <!-- Toast + Modal Host -->
+  <div id="toastStack" class="toast-stack"></div>
+  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <h4 id="modalTitle">Hinweis</h4>
+      <div id="modalMsg" class="msg"></div>
+      <div id="modalActions" class="actions"></div>
+    </div>
+  </div>
+
+  <aside id="settingsPanel" class="settings-panel" aria-hidden="true">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>Einstellungen</h3>
+      <button id="closeSettings" class="icon-btn" type="button">✕</button>
+    </div>
+
+    <div style="margin-top:8px">
+      <div class="muted" style="margin-bottom:6px">Marktpreise (pro Stück)</div>
+      <div id="pricesList" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="note">Rohstoff entfernen: Button rechts – lässt sich nicht rückgängig machen.</div>
+    </div>
+
+    <hr class="divider">
+
+    <div>
+      <div class="muted" style="margin-bottom:6px">Rohstoff hinzufügen</div>
+      <div class="settings-row"><input id="newResName" type="text" placeholder="Bezeichnung (z. B. Eichenbretter)" /></div>
+      <div class="settings-row"><input id="newResKey" type="text" placeholder="tag (wenn frei, dann gleich wie Bez.)" /></div>
+      <div class="settings-row"><input id="newResPrice" type="text" placeholder="Marktpreis (€)" /></div>
+      <div class="settings-row"><button id="addResource" class="primary" style="width:100%" type="button">Hinzufügen</button></div>
+      <div class="note">Neuer Rohstoff erscheint im Dropdown; in der Liste erst bei Bestand &gt; 0.</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- SPARZIEL EINSTELLUNGEN -->
+    <div>
+      <div class="muted" style="margin-bottom:6px">Sparziel</div>
+      <div class="settings-row"><input id="goalName" type="text" placeholder="Titel" /></div>
+      <div class="settings-row"><input id="goalAmount" type="text" placeholder="Zielbetrag (€)" /></div>
+      <div class="settings-row" style="display:flex;gap:8px">
+        <button id="saveGoal" class="primary" type="button" style="flex:1">Speichern</button>
+        <button id="clearGoal" class="icon-btn danger" type="button" style="flex:1">Sparziel löschen</button>
+      </div>
+      <div class="note">Oben rechts wird Fortschritt & „noch fehlend“ angezeigt.</div>
+    </div>
+
+    <hr class="divider">
+
+    <div>
+      <div class="muted" style="margin-bottom:6px">Allgemein</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" id="saveAuto" /> Auto-Save (localStorage)</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:6px"><input type="checkbox" id="showComments" checked /> Kommentare in Historie</label>
+    </div>
+
+    <hr class="divider">
+
+    <div>
+      <div class="muted">Import / Export</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="downloadJson" class="primary" type="button">Exportieren</button>
+        <label class="icon-btn" for="importFile" style="cursor:pointer;">Importieren
+          <input id="importFile" type="file" accept=".json" style="display:none" />
+        </label>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="clearHistory" class="icon-btn" type="button">Leere Historie</button>
+        <button id="resetBtn" class="icon-btn" type="button">Reset (Demo)</button>
+      </div>
+    </div>
+    <div style="height:40px"></div>
+  </aside>
+
 <script>
-/* ==========================
-   App State
-   ========================== */
+/* ===== State ===== */
 const DEFAULT = {
   balance: 0.00,
   lastChange: null,
   resources: {
-    holzstamm: {qty:0, price:0},
-    holzbretter: {qty:0, price:135},
-    rohöl: {qty:0, price:0},
-    kunststoff: {qty:0, price:450}
+    holzstamm: {qty:0, price:0, label:'Holzstamm'},
+    holzbretter: {qty:0, price:135, label:'Holzbretter'},
+    rohöl: {qty:0, price:0, label:'Rohöl'},   // Stück (Fässer)
+    kunststoff: {qty:0, price:450, label:'Kunststoff'}
   },
+  goal: null, // { name: 'Neue Säge', amount: 1000 }
   history: []
 };
-
-let state = loadState() || structuredClone(DEFAULT);
+let state = loadState() || clone(DEFAULT);
 let autoSave = true;
 
-/* ==========================
-   Helpers
-   ========================== */
-function fmt(n){
-  if(isNaN(n)) n = 0;
-  // ensure step-by-step rounding: round to cents
-  return n.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+/* ===== Utils ===== */
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function saveState(){ if(!autoSave) return; localStorage.setItem('safe_lager_state_v1', JSON.stringify(state)); }
+function loadState(){ try{ const raw=localStorage.getItem('safe_lager_state_v1'); return raw?JSON.parse(raw):null; }catch{ return null; } }
+function fmt(n){ if(isNaN(n)) n=0; return n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function round2(n){ return Math.round((Number(n)||0)*100)/100; }
+function parseNum(s){
+  if(s==null) return NaN;
+  const t=String(s).trim(); if(!t) return NaN;
+  if(t.includes(',') && t.includes('.')) return Number(t.replace(/\./g,'').replace(',', '.'));
+  if(t.includes(',')) return Number(t.replace(',', '.'));
+  return Number(t);
 }
-function round2(n){ return Math.round((Number(n) || 0) * 100) / 100; }
-
-function saveState(){
-  if(!autoSave) return;
-  localStorage.setItem('safe_lager_state_v1', JSON.stringify(state));
+function keyFromName(name){
+  if(!name) return '';
+  const map={'ä':'ae','ö':'oe','ü':'ue','Ä':'Ae','Ö':'Oe','Ü':'Ue','ß':'ss'};
+  return name.replace(/[ÄÖÜäöüß]/g,m=>map[m]).replace(/[^\w\s-]/g,'').replace(/\s+/g,' ').trim().toLowerCase().replace(/\s/g,'-');
 }
+function labelFor(k){ return state.resources[k]?.label || k; }
 
-function loadState(){
-  try{
-    const raw = localStorage.getItem('safe_lager_state_v1');
-    return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
+/* ===== Toast & Modal Helpers ===== */
+function showToast(kind, text, ms=2600){
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = `toast ${kind||''}`;
+  el.textContent = text;
+  stack.appendChild(el);
+  requestAnimationFrame(()=> el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 200); }, ms);
 }
+function modalBase(title, msg, buttons){
+  return new Promise(resolve=>{
+    const overlay = document.getElementById('modalOverlay');
+    const t = document.getElementById('modalTitle');
+    const m = document.getElementById('modalMsg');
+    const a = document.getElementById('modalActions');
+    t.textContent = title||'Hinweis'; m.textContent = msg||'';
+    a.innerHTML = '';
+    buttons.forEach(b=>{
+      const btn = document.createElement('button');
+      btn.className = 'btn' + (b.primary? ' primary':'');
+      btn.textContent = b.label;
+      btn.addEventListener('click', ()=>{ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); resolve(b.value); });
+      a.appendChild(btn);
+    });
+    overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false');
+  });
+}
+function modalAlert(title,msg,ok='OK'){ return modalBase(title,msg,[{label:ok, value:true, primary:true}]); }
+function modalConfirm(title,msg,ok='OK',cancel='Abbrechen'){ return modalBase(title,msg,[{label:cancel, value:false},{label:ok, value:true, primary:true}]); }
 
-function structuredClone(obj){ return JSON.parse(JSON.stringify(obj)); }
-
-/* ==========================
-   Calculations & UI updates
-   ========================== */
+/* ===== Calc ===== */
 function resourceValue(){
-  let sum = 0;
-  for(const k of Object.keys(state.resources)){
-    const r = state.resources[k];
-    const q = Number(r.qty) || 0;
-    const p = Number(r.price) || 0;
-    sum += q * p;
-  }
+  let sum=0;
+  Object.keys(state.resources).forEach(k=>{
+    const r=state.resources[k]; sum += (Number(r.qty)||0)*(Number(r.price)||0);
+  });
   return round2(sum);
 }
 
-function updateDisplays(){
-  // balance
-  document.getElementById('balanceDisplay').textContent = fmt(state.balance);
-  document.getElementById('resValue').textContent = fmt(resourceValue());
-  document.getElementById('totalWithRes').textContent = fmt(round2(state.balance + resourceValue()));
-  document.getElementById('lastChange').textContent = state.lastChange ? new Date(state.lastChange).toLocaleString('de-DE') : '–';
-
-  // resource rows
-  for(const k of Object.keys(state.resources)){
-    document.getElementById('q-' + k).textContent = state.resources[k].qty;
-    document.getElementById('val-' + k).textContent = fmt(round2((Number(state.resources[k].qty) || 0) * (Number(state.resources[k].price) || 0)));
-    // sync price inputs
-    const priceInputs = document.querySelectorAll('.price[data-key="'+k+'"]');
-    priceInputs.forEach(inp => inp.value = (state.resources[k].price !== undefined && state.resources[k].price !== null) ? state.resources[k].price : '');
-  }
-
-  // history
-  renderHistory();
-  saveState();
-}
-
-function pushHistory(entry){
-  // entry: {type:'tx'|'res', action:'in'|'out', amount, resource?, comment?, ts}
-  entry.ts = new Date().toISOString();
-  state.history.unshift(entry); // newest first
-  // keep reasonable length
-  if(state.history.length > 2000) state.history.length = 2000;
-  state.lastChange = entry.ts;
-  saveState();
-  updateDisplays();
-}
-
-/* ==========================
-   UI Actions: Transactions
-   ========================== */
-
-document.getElementById('txSubmit').addEventListener('click', () => {
-  const type = document.getElementById('txType').value;
-  const amountRaw = document.getElementById('txAmount').value;
-  const comment = document.getElementById('txComment').value.trim();
-  let amount = round2(Number(amountRaw));
-  if(isNaN(amount) || amount <= 0){
-    alert('Bitte einen gültigen Betrag > 0 eingeben.');
-    return;
-  }
-  if(type === 'in'){
-    state.balance = round2(state.balance + amount);
-    pushHistory({type:'tx', action:'in', amount: amount, comment});
-  } else {
-    // Auszahlung
-    state.balance = round2(state.balance - amount);
-    pushHistory({type:'tx', action:'out', amount: amount, comment});
-  }
-
-  // clear inputs
-  document.getElementById('txAmount').value = '';
-  document.getElementById('txComment').value = '';
-  updateDisplays();
-});
-
-/* ==========================
-   UI Actions: Resources
-   ========================== */
-
-document.getElementById('resAdd').addEventListener('click', () => {
-  changeResourceByForm(true);
-});
-document.getElementById('resRemove').addEventListener('click', () => {
-  changeResourceByForm(false);
-});
-
-function changeResourceByForm(isAdd){
-  const key = document.getElementById('resSelect').value;
-  const amtRaw = document.getElementById('resAmount').value;
-  const amt = Math.floor(Number(amtRaw));
-  if(isNaN(amt) || amt === 0){
-    alert('Bitte eine gültige Anzahl (ganze Zahl) eingeben (≠ 0).');
-    return;
-  }
-  const delta = isAdd ? amt : -amt;
-  const prev = Number(state.resources[key].qty) || 0;
-  const next = prev + delta;
-  if(next < 0){
-    if(!confirm('Bestand würde negativ werden. Fortfahren?')) return;
-  }
-  state.resources[key].qty = next;
-  pushHistory({type:'res', action: isAdd ? 'in' : 'out', resource:key, amount: amt, comment: ''});
-  document.getElementById('resAmount').value = '';
-  updateDisplays();
-}
-
-/* increment/decrement buttons per resource */
-document.querySelectorAll('.iconbtn').forEach(btn=>{
-  btn.addEventListener('click', (e)=>{
-    const act = btn.getAttribute('data-act');
-    const key = btn.getAttribute('data-key');
-    if(!key) return;
-    const step = act === 'inc' ? 1 : -1;
-    const prev = Number(state.resources[key].qty) || 0;
-    const next = prev + step;
-    if(next < 0) return;
-    state.resources[key].qty = next;
-    pushHistory({type:'res', action: step>0 ? 'in' : 'out', resource:key, amount: Math.abs(step), comment: ''});
-    updateDisplays();
+/* ===== UI: dynamic render ===== */
+function updateResSelect(){
+  const sel=document.getElementById('resSelect'); sel.innerHTML='';
+  Object.keys(state.resources).sort((a,b)=>labelFor(a).localeCompare(labelFor(b),'de')).forEach(k=>{
+    const o=document.createElement('option'); o.value=k; o.textContent=labelFor(k); sel.appendChild(o);
   });
-});
-
-/* Price inputs */
-document.querySelectorAll('.price').forEach(inp=>{
-  inp.addEventListener('change', ()=>{
-    const key = inp.getAttribute('data-key');
-    const v = round2(Number(inp.value));
-    state.resources[key].price = isNaN(v) ? 0 : v;
-    pushHistory({type:'price', resource:key, price: state.resources[key].price, ts: new Date().toISOString()});
-    updateDisplays();
+}
+function renderPrices(){
+  const box=document.getElementById('pricesList'); box.innerHTML='';
+  Object.keys(state.resources).sort((a,b)=>labelFor(a).localeCompare(labelFor(b),'de')).forEach(k=>{
+    const r=state.resources[k];
+    const row=document.createElement('div'); row.className='settings-row'; row.style.gap='6px';
+    const label=document.createElement('div'); label.style.flex='1'; label.textContent=r.label || k;
+    const inp=document.createElement('input'); inp.type='text'; inp.value=(r.price ?? 0); inp.style.flex='1';
+    const del=document.createElement('button'); del.type='button'; del.className='icon-btn danger'; del.textContent='Entfernen';
+    inp.addEventListener('change', ()=>{
+      const v=round2(parseNum(inp.value));
+      state.resources[k].price = isNaN(v)?0:v;
+      pushHistory({type:'price', resource:k, price: state.resources[k].price});
+      updateDisplays();
+      showToast('ok','Preis aktualisiert');
+    });
+    del.addEventListener('click', async ()=>{
+      const qty = Number(state.resources[k]?.qty)||0;
+      const text = qty>0
+        ? `${labelFor(k)} hat noch Bestand (${qty}). Trotzdem löschen?`
+        : `${labelFor(k)} wirklich löschen?`;
+      const ok = await modalConfirm('Rohstoff entfernen', text, 'Löschen', 'Abbrechen');
+      if(!ok) return;
+      delete state.resources[k];
+      pushHistory({type:'info', action:'delete-resource', resource:k, comment:`${label.textContent} entfernt`});
+      updateDisplays();
+      showToast('ok','Rohstoff entfernt');
+    });
+    row.appendChild(label); row.appendChild(inp); row.appendChild(del); box.appendChild(row);
   });
-});
-
-/* ==========================
-   History render & interactions
-   ========================== */
+}
+function renderInventory(){
+  const list=document.getElementById('inventoryList'); list.innerHTML='';
+  Object.keys(state.resources).forEach(k=>{
+    const r=state.resources[k]; const qty=Number(r.qty)||0; if(qty<=0) return;
+    const row=document.createElement('div'); row.className='resource';
+    const left=document.createElement('div'); left.className='label';
+    const t=document.createElement('div'); t.className='title'; t.textContent=r.label||k;
+    const m=document.createElement('div'); m.className='note'; m.textContent=(k==='rohöl')?'Stück (Fässer)':'Stück';
+    left.appendChild(t); left.appendChild(m);
+    const qtyEl=document.createElement('div'); qtyEl.className='qty'; qtyEl.textContent=qty;
+    const val=document.createElement('div'); val.className='val';
+    val.textContent = fmt(round2(qty*(Number(r.price)||0)));
+    row.appendChild(left); row.appendChild(qtyEl); row.appendChild(val);
+    list.appendChild(row);
+  });
+}
 function renderHistory(){
   const list = document.getElementById('historyList');
+  const show = document.getElementById('toggleHistory').getAttribute('aria-expanded') === 'true';
+  list.style.display = show ? '' : 'none';
   list.innerHTML = '';
-  const showComments = document.getElementById('showComments').checked;
-  state.history.forEach((h, idx) => {
-    const el = document.createElement('div');
-    el.className = 'entry';
-    const left = document.createElement('div');
-    left.className = 'meta';
-    const t = document.createElement('div');
-    t.style.fontWeight = 600;
-    if(h.type === 'tx'){
-      t.textContent = h.action === 'in' ? `Einzahlung +${fmt(h.amount)}` : `Auszahlung −${fmt(h.amount)}`;
-    } else if(h.type === 'res'){
-      t.textContent = `${h.action === 'in' ? 'Eingelagert' : 'Entnommen'} ${h.amount} × ${labelFor(h.resource)}`;
-    } else if(h.type === 'price'){
-      t.textContent = `Preis: ${labelFor(h.resource)} → ${fmt(h.price)}`;
-    } else {
-      t.textContent = JSON.stringify(h);
-    }
-    const sub = document.createElement('div');
-    sub.className='qsmall';
-    sub.textContent = new Date(h.ts || h.ts === 0 ? h.ts : new Date()).toLocaleString('de-DE');
+  const showComments=document.getElementById('showComments')?document.getElementById('showComments').checked:true;
+  state.history.forEach(h=>{
+    const el=document.createElement('div'); el.className='entry';
+    const left=document.createElement('div'); left.className='meta';
+    const t=document.createElement('div'); t.style.fontWeight='600';
+    if(h.type==='tx'){ t.textContent= h.action==='in'?`Einzahlung +${fmt(h.amount)}`:`Auszahlung −${fmt(h.amount)}`; }
+    else if(h.type==='res'){ t.textContent=`${h.action==='in'?'Eingelagert':'Entnommen'} ${h.amount} × ${labelFor(h.resource)}`; }
+    else if(h.type==='price'){ t.textContent=`Preis geändert: ${labelFor(h.resource)} → ${fmt(h.price)}`; }
+    else { t.textContent=h.comment || JSON.stringify(h); }
     left.appendChild(t);
-    left.appendChild(sub);
-
-    const right = document.createElement('div');
-    right.style.display='flex'; right.style.flexDirection='column'; right.style.alignItems='flex-end';
-    const tag = document.createElement('div'); tag.className='tag';
-    tag.textContent = h.type === 'tx' ? 'Geld' : h.type === 'res' ? 'Ressource' : 'Info';
-    const btn = document.createElement('button'); btn.className='btn btn-ghost'; btn.textContent = 'Details';
-    btn.addEventListener('click', ()=> showDetails(h));
-    right.appendChild(tag);
-    right.appendChild(btn);
-
-    el.appendChild(left);
-    el.appendChild(right);
-
-    list.appendChild(el);
+    if(showComments && h.comment && h.type!=='info'){ const c=document.createElement('div'); c.className='note'; c.textContent=h.comment; left.appendChild(c); }
+    const sub=document.createElement('div'); sub.className='note';
+    sub.textContent=new Date(h.ts||Date.now()).toLocaleString('de-DE'); left.appendChild(sub);
+    const right=document.createElement('div'); right.style.display='flex'; right.style.flexDirection='column'; right.style.alignItems='flex-end';
+    const tag=document.createElement('div'); tag.className='tag'; tag.textContent= h.type==='tx'?'Geld': h.type==='res'?'Ressource':'Info';
+    const btn=document.createElement('button'); btn.className='icon-btn'; btn.textContent='Details'; btn.type='button';
+    btn.addEventListener('click', ()=>{
+      modalAlert('Details', (t.textContent) +
+        (h.comment?`\nKommentar: ${h.comment}`:'') +
+        `\nZeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
+    });
+    right.appendChild(tag); right.appendChild(btn);
+    el.appendChild(left); el.appendChild(right); list.appendChild(el);
   });
 }
-
-function labelFor(key){
-  const map = {holzstamm:'Holzstamm', holzbretter:'Holzbretter', rohöl:'Rohöl', kunststoff:'Kunststoff'};
-  return map[key] || key;
-}
-
-function showDetails(h){
-  // simple modal-like prompt
-  let lines = [];
-  if(h.type === 'tx'){
-    lines.push(`${h.action === 'in' ? 'Einzahlung' : 'Auszahlung'}: ${fmt(h.amount)}`);
-    if(h.comment) lines.push(`Kommentar: ${h.comment}`);
-    lines.push(`Zeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
-  } else if(h.type === 'res'){
-    lines.push(`${h.action === 'in' ? 'Eingelagert' : 'Entnommen'}: ${h.amount} × ${labelFor(h.resource)}`);
-    if(h.comment) lines.push(`Kommentar: ${h.comment}`);
-    lines.push(`Zeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
-  } else if(h.type === 'price'){
-    lines.push(`Preisänderung: ${labelFor(h.resource)} → ${fmt(h.price)}`);
-    lines.push(`Zeit: ${new Date(h.ts).toLocaleString('de-DE')}`);
-  } else {
-    lines.push(JSON.stringify(h, null, 2));
+function renderGoalBox(){
+  const box = document.getElementById('goalContent');
+  box.innerHTML = '';
+  if(!state.goal || isNaN(Number(state.goal.amount)) || Number(state.goal.amount) <= 0){
+    const none = document.createElement('div');
+    none.className = 'note';
+    none.textContent = 'Kein Sparziel gesetzt. In den Einstellungen hinzufügen.';
+    box.appendChild(none);
+    return;
   }
-  alert(lines.join('\\n'));
+  const total = round2(state.balance + resourceValue());
+  const target = round2(Number(state.goal.amount));
+  const remain = Math.max(0, round2(target - total));
+  const pct = Math.min(100, Math.max(0, Math.round((total/target)*100)));
+
+  const title = document.createElement('div');
+  title.className = 'goal-title';
+  title.textContent = `${state.goal.name || 'Sparziel'} — Ziel: ${fmt(target)}`;
+  const barWrap = document.createElement('div');
+  barWrap.className = 'progress-wrap';
+  const bar = document.createElement('div');
+  bar.className = 'progress';
+  bar.style.width = pct + '%';
+  barWrap.appendChild(bar);
+
+  const line = document.createElement('div');
+  line.className = 'goal-line';
+  const left = document.createElement('div');
+  left.textContent = `Fortschritt: ${pct}%`;
+  const right = document.createElement('div');
+  right.textContent = remain > 0 ? `Fehlen noch: ${fmt(remain)}` : 'Ziel erreicht 🎉';
+  line.appendChild(left); line.appendChild(right);
+
+  box.appendChild(title);
+  box.appendChild(barWrap);
+  box.appendChild(line);
 }
 
-/* ==========================
-   Export / Import / Reset
-   ========================== */
-document.getElementById('exportBtn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'safe_lager_export.json'; a.click();
-  URL.revokeObjectURL(url);
+/* ===== Master update ===== */
+function updateDisplays(){
+  const total=round2(state.balance + resourceValue());
+  document.getElementById('totalWithRes').textContent=fmt(total);
+  document.getElementById('balanceDisplay').textContent=fmt(state.balance);
+  document.getElementById('resValue').textContent=fmt(resourceValue());
+  document.getElementById('lastChange').textContent= state.lastChange ? new Date(state.lastChange).toLocaleString('de-DE') : '–';
+
+  updateResSelect();
+  renderPrices();
+  renderInventory();
+  renderHistory();
+  renderGoalBox();
+  saveState();
+}
+
+/* ===== History push ===== */
+function pushHistory(entry){
+  entry.ts=new Date().toISOString();
+  state.history.unshift(entry);
+  if(state.history.length>2000) state.history.length=2000;
+  state.lastChange=entry.ts;
+  updateDisplays();
+}
+
+/* ===== Settings panel ===== */
+const settingsPanel=document.getElementById('settingsPanel');
+document.getElementById('toggleSettings').addEventListener('click', ()=>{
+  const open=settingsPanel.classList.toggle('open');
+  document.getElementById('toggleSettings').setAttribute('aria-expanded', open?'true':'false');
+  settingsPanel.setAttribute('aria-hidden', open?'false':'true');
+});
+document.getElementById('closeSettings').addEventListener('click', ()=>{
+  settingsPanel.classList.remove('open'); settingsPanel.setAttribute('aria-hidden','true');
+  document.getElementById('toggleSettings').setAttribute('aria-expanded','false');
 });
 
-document.getElementById('downloadJson').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'safe_lager_state.json'; a.click();
-  URL.revokeObjectURL(url);
+/* ===== History collapse ===== */
+document.getElementById('toggleHistory').addEventListener('click',(e)=>{
+  const btn=e.currentTarget;
+  const exp = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', exp ? 'false' : 'true');
+  btn.textContent = exp ? 'Aufklappen' : 'Zuklappen';
+  renderHistory();
 });
 
+/* ===== Transactions (mit Modals/Toasts) ===== */
+document.getElementById('txSubmit').addEventListener('click', async ()=>{
+  const type=document.getElementById('txType').value;
+  const raw=document.getElementById('txAmount').value;
+  const comment=(document.getElementById('txComment').value||'').trim();
+  const amount=round2(parseNum(raw));
+  if(isNaN(amount)||amount<=0){
+    await modalAlert('Eingabe prüfen', 'Bitte einen gültigen Betrag > 0 eingeben.');
+    return;
+  }
+  if(type==='in'){
+    state.balance=round2(state.balance+amount);
+    pushHistory({type:'tx',action:'in',amount,comment});
+    showToast('ok','Einzahlung verbucht');
+  } else {
+    state.balance=round2(state.balance-amount);
+    pushHistory({type:'tx',action:'out',amount,comment});
+    showToast('ok','Auszahlung verbucht');
+  }
+  document.getElementById('txAmount').value=''; document.getElementById('txComment').value='';
+});
+
+/* ===== Resource quick apply (mit Modal bei negativ) ===== */
+document.getElementById('resApply').addEventListener('click', async ()=>{
+  const key=document.getElementById('resSelect').value;
+  const amt=Math.trunc(parseNum(document.getElementById('resAmount').value));
+  const comment=(document.getElementById('resComment').value||'').trim();
+  if(!key){ await modalAlert('Hinweis','Bitte Rohstoff wählen.'); return; }
+  if(!amt||amt===0){ await modalAlert('Hinweis','Bitte ganze Zahl ≠ 0 eingeben.'); return; }
+  const prev=Number(state.resources[key]?.qty)||0;
+  const next=prev+amt;
+  if(next<0){
+    const go = await modalConfirm('Negativer Bestand?','Bestand würde negativ werden. Fortfahren?','Fortfahren','Abbrechen');
+    if(!go) return;
+  }
+  state.resources[key].qty=next;
+  pushHistory({type:'res',action:amt>0?'in':'out',resource:key,amount:Math.abs(amt),comment});
+  document.getElementById('resAmount').value=''; document.getElementById('resComment').value='';
+  showToast('ok','Bestandsänderung verbucht');
+});
+
+/* ===== Add resource (settings) ===== */
+document.getElementById('newResName').addEventListener('input',(e)=>{
+  document.getElementById('newResKey').value = keyFromName(e.target.value);
+});
+document.getElementById('addResource').addEventListener('click', async ()=>{
+  const name=(document.getElementById('newResName').value||'').trim();
+  let key=(document.getElementById('newResKey').value||'').trim();
+  const price=round2(parseNum(document.getElementById('newResPrice').value));
+  if(!name){ await modalAlert('Eingabe prüfen','Bitte Bezeichnung angeben.'); return; }
+  if(!key){ key = keyFromName(name); document.getElementById('newResKey').value=key; }
+  if(!state.resources[key]) state.resources[key]={qty:0, price:0, label:name};
+  state.resources[key].label = name;
+  if(!isNaN(price)) state.resources[key].price = price;
+  pushHistory({type:'price',resource:key,price:state.resources[key].price,comment:'Rohstoff angelegt/aktualisiert'});
+  // Felder leeren
+  document.getElementById('newResName').value='';
+  document.getElementById('newResKey').value='';
+  document.getElementById('newResPrice').value='';
+  showToast('ok','Rohstoff hinzugefügt/aktualisiert');
+});
+
+/* ===== Goal set / clear (mit Modals/Toasts) ===== */
+document.getElementById('saveGoal').addEventListener('click', async ()=>{
+  const name = (document.getElementById('goalName').value||'').trim();
+  const amt = round2(parseNum(document.getElementById('goalAmount').value));
+  if(isNaN(amt) || amt <= 0){
+    await modalAlert('Ungültiger Zielbetrag','Bitte einen gültigen Zielbetrag eingeben.');
+    return;
+  }
+  state.goal = { name: name || 'Sparziel', amount: amt };
+  pushHistory({type:'info', action:'save-goal', comment:`Sparziel gesetzt: ${state.goal.name} (${fmt(amt)})`});
+  updateDisplays();
+  showToast('ok','Sparziel gespeichert');
+});
+document.getElementById('clearGoal').addEventListener('click', async ()=>{
+  if(!state.goal){ await modalAlert('Hinweis','Kein Sparziel gesetzt.'); return; }
+  const ok = await modalConfirm('Sparziel löschen', `Sparziel „${state.goal.name}“ wirklich löschen?`, 'Löschen', 'Abbrechen');
+  if(!ok) return;
+  pushHistory({type:'info', action:'clear-goal', comment:`Sparziel entfernt: ${state.goal.name}`});
+  state.goal = null;
+  updateDisplays();
+  showToast('ok','Sparziel gelöscht');
+});
+
+/* ===== Import / Export / Reset ===== */
+document.getElementById('downloadJson').addEventListener('click', ()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='safe_lager_state.json'; a.click(); URL.revokeObjectURL(url);
+});
 document.getElementById('importFile').addEventListener('change', (ev)=>{
-  const f = ev.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = () => {
+  const f=ev.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
     try{
-      const parsed = JSON.parse(reader.result);
-      if(confirm('Import ersetzen den aktuellen Zustand? (nicht rückgängig)')){
-        state = parsed;
-        saveState();
-        updateDisplays();
-        alert('Import erfolgreich.');
+      const parsed=JSON.parse(reader.result);
+      // hier bewusst native confirm/alert gelassen (nicht angefragt)
+      if(confirm('Aktuellen Zustand ersetzen?')){
+        state=parsed; saveState(); updateDisplays(); alert('Import erfolgreich.');
       }
-    }catch(e){
-      alert('Ungültiges JSON.');
-    }
+    }catch{ alert('Ungültiges JSON.'); }
   };
-  reader.readAsText(f);
-  // reset input
-  ev.target.value = '';
+  reader.readAsText(f); ev.target.value='';
 });
+document.getElementById('clearHistory').addEventListener('click', ()=>{ if(confirm('Historie wirklich leeren?')){ state.history=[]; saveState(); updateDisplays(); }});
+document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Alles zurücksetzen? (lokal)')){ state=clone(DEFAULT); saveState(); updateDisplays(); }});
 
-document.getElementById('clearHistory').addEventListener('click', ()=>{
-  if(!confirm('Historie wirklich leeren?')) return;
-  state.history = [];
-  saveState();
-  updateDisplays();
-});
-
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(!confirm('Alles zurücksetzen? (lokal, unwiderruflich)')) return;
-  state = structuredClone(DEFAULT);
-  saveState();
-  updateDisplays();
-});
-
-/* toggle auto-save & comments */
-document.getElementById('saveAuto').addEventListener('change', (e)=>{
-  autoSave = e.target.checked;
-  if(autoSave) saveState();
-});
-document.getElementById('showComments').addEventListener('change', (e)=>{
-  // just re-render (we currently show details by clicking)
-  updateDisplays();
-});
-
-/* allow manual file import via label too */
-document.getElementById('importFile').addEventListener('click', (e)=> e.stopPropagation());
-
-/* ==========================
-   Init: load defaults into UI placeholders
-   ========================== */
+/* ===== Init ===== */
 (function init(){
-  // if no saved state, initialize defaults
-  if(!localStorage.getItem('safe_lager_state_v1')){
-    // seed demo values (optional — you can remove)
-    state = structuredClone(DEFAULT);
-    state.balance = 0.00;
-    state.resources.holzbretter.qty = 0;
-    state.resources.holzbretter.price = 135;
-    state.resources.kunststoff.price = 450;
-    saveState();
-  } else {
-    const saved = loadState();
-    if(saved) state = saved;
-  }
-
-  // set autoSave checkbox default true
+  // Labels absichern (falls alte Exporte ohne label)
+  Object.keys(state.resources).forEach(k=>{ if(!state.resources[k].label){ state.resources[k].label = k; }});
   document.getElementById('saveAuto').checked = autoSave;
-  // fill price placeholders (some inputs appear twice)
-  document.querySelectorAll('.price').forEach(inp=>{
-    const key = inp.getAttribute('data-key');
-    if(state.resources[key] && state.resources[key].price !== undefined) inp.value = state.resources[key].price;
-  });
+
+  // Falls Sparziel existiert, in Felder spiegeln
+  if(state.goal){
+    document.getElementById('goalName').value = state.goal.name || '';
+    document.getElementById('goalAmount').value = state.goal.amount ?? '';
+  }
 
   updateDisplays();
 })();
 </script>
 </body>
 </html>
+
